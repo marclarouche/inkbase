@@ -1,0 +1,135 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --ink:        #1a1a1a;
+  --ink-muted:  #555;
+  --ink-faint:  #999;
+  --paper:      #f9f6f1;
+  --paper-warm: #f2ede4;
+  --paper-card: #ffffff;
+  --accent:     #c0392b;
+  --accent-dim: #e8d0cd;
+  --branch:     #2980b9;
+  --branch-dim: #d0e8f5;
+  --merge:      #27ae60;
+  --merge-dim:  #d0f0dd;
+  --border:     #ddd8d0;
+  --shadow:     0 2px 12px rgba(0,0,0,0.08);
+  --shadow-lg:  0 8px 32px rgba(0,0,0,0.12);
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-mono:  'JetBrains Mono', monospace;
+  --font-sans:  'Inter', system-ui, sans-serif;
+  --radius:     4px;
+  --radius-lg:  8px;
+}
+
+html { font-size: 16px; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* Typography */
+h1, h2, h3 { font-family: var(--font-serif); line-height: 1.2; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--paper-warm); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Article prose styles */
+.prose { max-width: 68ch; line-height: 1.8; color: var(--ink); }
+.prose h1 { font-size: 2.2rem; margin: 2rem 0 1rem; color: var(--ink); }
+.prose h2 { font-size: 1.6rem; margin: 2rem 0 0.75rem; color: var(--ink); }
+.prose h3 { font-size: 1.25rem; margin: 1.5rem 0 0.5rem; }
+.prose p  { margin-bottom: 1.25rem; }
+.prose ul, .prose ol { margin: 1rem 0 1.25rem 1.5rem; }
+.prose li { margin-bottom: 0.4rem; }
+.prose blockquote {
+  border-left: 3px solid var(--accent);
+  padding: 0.5rem 1rem;
+  margin: 1.5rem 0;
+  background: var(--paper-warm);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-style: italic;
+  color: var(--ink-muted);
+}
+.prose code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--paper-warm);
+  padding: 0.15em 0.4em;
+  border-radius: var(--radius);
+  color: var(--accent);
+}
+.prose pre {
+  background: var(--ink);
+  color: #f0ede8;
+  padding: 1.25rem;
+  border-radius: var(--radius-lg);
+  overflow-x: auto;
+  margin: 1.5rem 0;
+}
+.prose pre code { background: none; color: inherit; padding: 0; }
+.prose a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.prose hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--paper-card);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+.btn:hover { background: var(--paper-warm); border-color: var(--ink-faint); }
+.btn-primary {
+  background: var(--accent); color: white;
+  border-color: var(--accent);
+}
+.btn-primary:hover { background: #a93226; border-color: #a93226; }
+.btn-merge {
+  background: var(--merge); color: white;
+  border-color: var(--merge);
+}
+.btn-merge:hover { background: #219a52; }
+.btn-ghost { background: transparent; border-color: transparent; }
+.btn-ghost:hover { background: var(--paper-warm); border-color: var(--border); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Tags / badges */
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  font-family: var(--font-mono);
+}
+.badge-branch { background: var(--branch-dim); color: var(--branch); }
+.badge-main   { background: var(--merge-dim);  color: var(--merge); }
+.badge-draft  { background: var(--accent-dim); color: var(--accent); }
+
+/* Cards */
+.card {
+  background: var(--paper-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+/* Utility */
+.mono { font-family: var(--font-mono); }
+.muted { color: var(--ink-muted); }
+.faint { color: var(--ink-faint); }
