@@ -38,9 +38,9 @@ export default function Layout() {
 
           {/* Nav */}
           <nav style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <NavLink to="/" className="btn btn-ghost" style={navStyle}>
+            <button className="btn btn-ghost" onClick={() => navigate('/')} style={{ color: 'var(--ink-muted)', fontWeight: 400 }}>
               <Home size={15} /> Library
-            </NavLink>
+            </button>
             <NavLink to="/review" className="btn btn-ghost" style={navStyle}>
               <GitPullRequest size={15} /> Review Queue
             </NavLink>
