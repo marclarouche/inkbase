@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 120" width="28" height="28">
+
+  <!-- Left page fill -->
+  <path d="M8 8 Q6 88 22 103 L72 106 L72 8 Z"
+        fill="#1a5276" opacity="0.12"/>
+  <!-- Left page outline -->
+  <path d="M8 8 Q6 88 22 103 L72 106 L72 8 Z"
+        fill="none" stroke="#1a5276" stroke-width="3.5" stroke-linejoin="round"/>
+
+  <!-- Right page fill -->
+  <path d="M136 8 Q138 88 122 103 L72 106 L72 8 Z"
+        fill="#c0392b" opacity="0.10"/>
+  <!-- Right page outline -->
+  <path d="M136 8 Q138 88 122 103 L72 106 L72 8 Z"
+        fill="none" stroke="#c0392b" stroke-width="3.5" stroke-linejoin="round"/>
+
+  <!-- Spine -->
+  <line x1="72" y1="8" x2="72" y2="106" stroke="#555" stroke-width="4"/>
+
+  <!-- Text lines — left page -->
+  <line x1="22" y1="28" x2="66" y2="28" stroke="#1a5276" stroke-width="2" opacity="0.3"/>
+  <line x1="22" y1="44" x2="66" y2="44" stroke="#1a5276" stroke-width="2" opacity="0.3"/>
+  <line x1="22" y1="60" x2="64" y2="60" stroke="#1a5276" stroke-width="2" opacity="0.3"/>
+  <line x1="22" y1="76" x2="66" y2="76" stroke="#1a5276" stroke-width="2" opacity="0.3"/>
+
+  <!-- Text lines — right page -->
+  <line x1="78" y1="28" x2="122" y2="28" stroke="#c0392b" stroke-width="2" opacity="0.3"/>
+  <line x1="78" y1="44" x2="122" y2="44" stroke="#c0392b" stroke-width="2" opacity="0.3"/>
+  <line x1="78" y1="60" x2="120" y2="60" stroke="#c0392b" stroke-width="2" opacity="0.3"/>
+  <line x1="78" y1="76" x2="122" y2="76" stroke="#c0392b" stroke-width="2" opacity="0.3"/>
+
+  <!-- Commit dots on spine -->
+  <circle cx="72" cy="30" r="8" fill="#c0392b" stroke="white" stroke-width="2.5"/>
+  <circle cx="72" cy="58" r="8" fill="#1a5276" stroke="white" stroke-width="2.5"/>
+  <circle cx="72" cy="86" r="8" fill="#c0392b" stroke="white" stroke-width="2.5"/>
+
+  <!-- Book binding -->
+  <path d="M8 106 Q16 114 22 115 L72 117 L122 115 Q128 114 136 106"
+        fill="none" stroke="#999" stroke-width="2" opacity="0.4"/>
+
+</svg>

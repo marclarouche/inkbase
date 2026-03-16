@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { BookOpen, GitPullRequest, Plus, Home } from 'lucide-react'
+import { GitPullRequest, Plus, Home } from 'lucide-react'
 import { useState } from 'react'
 import NewArticleModal from './NewArticleModal.jsx'
 
@@ -24,7 +24,7 @@ export default function Layout() {
         }}>
           {/* Wordmark */}
           <NavLink to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <BookOpen size={20} color="var(--accent)" />
+            <img src="/inkbase-icon.svg" alt="Inkbase" width={28} height={28} style={{ display: 'block' }} />
             <span style={{
               fontFamily: 'var(--font-serif)',
               fontSize: '1.25rem',
@@ -32,15 +32,15 @@ export default function Layout() {
               color: 'var(--ink)',
               letterSpacing: '-0.01em',
             }}>
-              Inkbase
+              ink<span style={{ color: 'var(--accent)' }}>base</span>
             </span>
           </NavLink>
 
           {/* Nav */}
           <nav style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <button className="btn btn-ghost" onClick={() => navigate('/')} style={{ color: 'var(--ink-muted)', fontWeight: 400 }}>
+            <NavLink to="/" className="btn btn-ghost" style={navStyle}>
               <Home size={15} /> Library
-            </button>
+            </NavLink>
             <NavLink to="/review" className="btn btn-ghost" style={navStyle}>
               <GitPullRequest size={15} /> Review Queue
             </NavLink>
