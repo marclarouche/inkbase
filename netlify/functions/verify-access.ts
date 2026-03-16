@@ -1,11 +1,12 @@
 export default async (request: Request, context: any) => {
-  // Cloudflare Access automatically sends this JWT header on all authenticated requests
-  const cfJwt = request.headers.get("CF-Access-Jwt-Assertion")
+  const host = request.headers.get("host") || ""
 
-  if (!cfJwt) {
+  // Block direct access to the Netlify subdomain
+  if (host.includes("netlify.app")) {
     return new Response("Unauthorized", { status: 403 })
   }
 
+  // Allow all other traffic through (inkbase.dev via Cloudflare)
   return context.next()
 }
 
