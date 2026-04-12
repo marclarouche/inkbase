@@ -7,16 +7,6 @@ const octokit = new Octokit({
 const OWNER = import.meta.env.VITE_GITHUB_OWNER
 const REPO  = import.meta.env.VITE_GITHUB_REPO
 
-// ─── Root path constants ──────────────────────────────────────────────────────
-// Use these when calling any article function to target a specific folder tree.
-// Defaults to 'content' everywhere so all existing Inkbase calls are unchanged.
-
-export const ROOTS = {
-  ARTICLES:   'content',           // standard Inkbase articles
-  LIT_REVIEW: 'lit-review',        // dissertation literature review
-  CATALOGS:   'catalogs/nist-800-53-r5', // NIST OSCAL control families
-}
-
 // ─── In-memory cache ─────────────────────────────────────────────────────────
 // Keyed by a string, each entry is { value, expiresAt }.
 // TTL is 60s for most reads. Write operations invalidate relevant keys.
@@ -88,57 +78,24 @@ export async function deleteBranch(branchName) {
   cache.invalidate('branches')
 }
 
-// ─── Articles (files) ─────────────────────────────────────────────────────────
-// All functions accept an optional `rootPath` parameter.
-// Pass ROOTS.LIT_REVIEW or ROOTS.CATALOGS to read dissertation content.
-// Omit it (or pass ROOTS.ARTICLES) for standard Inkbase behaviour.
-//
-// File layout per rootPath:
-//   content/               → content/<slug>/index.md   (Inkbase default)
-//   lit-review/            → lit-review/<slug>/index.md
-//   catalogs/nist-800-53-r5/ → catalogs/nist-800-53-r5/<slug>.md  (flat, no subfolder)
+// ─── Articles (files) ────────────────────────────────────────────────────────
 
-function filePath(rootPath, slug) {
-  // NIST catalog files live directly in the folder as <FAMILY>.md (e.g. AC.md)
-  // Everything else uses the <slug>/index.md convention
-  if (rootPath === ROOTS.CATALOGS) {
-    return `${rootPath}/${slug}.md`
-  }
-  return `${rootPath}/${slug}/index.md`
-}
-
-export async function listArticles(branch = 'main', rootPath = ROOTS.ARTICLES) {
-  const key = `articles:${rootPath}:${branch}`
+export async function listArticles(branch = 'main') {
+  const key = `articles:${branch}`
   const hit = cache.get(key)
   if (hit) return hit
 
   try {
     const { data } = await octokit.repos.getContent({
       owner: OWNER, repo: REPO,
-      path: rootPath,
+      path: 'content',
       ref: branch,
     })
-
-    // NIST catalog: files directly in the folder (AC.md, AU.md, …)
-    if (rootPath === ROOTS.CATALOGS) {
-      const files = data.filter(item => item.type === 'file' && item.name.endsWith('.md'))
-      const articles = files.map(f => ({
-        slug:        f.name.replace('.md', ''),
-        title:       f.name.replace('.md', ''),
-        description: 'NIST SP 800-53 Control Family',
-        tags:        ['nist', 'catalog'],
-        date:        '',
-      }))
-      cache.set(key, articles)
-      return articles
-    }
-
-    // Standard layout: subfolders each containing index.md
     const folders = data.filter(item => item.type === 'dir')
     const articles = await Promise.all(
       folders.map(async folder => {
         try {
-          const meta = await getArticleMeta(folder.name, branch, rootPath)
+          const meta = await getArticleMeta(folder.name, branch)
           return { slug: folder.name, ...meta }
         } catch {
           return { slug: folder.name, title: folder.name, description: '' }
@@ -152,14 +109,14 @@ export async function listArticles(branch = 'main', rootPath = ROOTS.ARTICLES) {
   }
 }
 
-export async function getArticleContent(slug, branch = 'main', rootPath = ROOTS.ARTICLES) {
-  const key = `content:${rootPath}:${slug}:${branch}`
+export async function getArticleContent(slug, branch = 'main') {
+  const key = `content:${slug}:${branch}`
   const hit = cache.get(key)
   if (hit) return hit
 
   const { data } = await octokit.repos.getContent({
     owner: OWNER, repo: REPO,
-    path: filePath(rootPath, slug),
+    path: `content/${slug}/index.md`,
     ref: branch,
   })
   const content = atob(data.content.replace(/\n/g, ''))
@@ -168,20 +125,18 @@ export async function getArticleContent(slug, branch = 'main', rootPath = ROOTS.
   return result
 }
 
-export async function getArticleMeta(slug, branch = 'main', rootPath = ROOTS.ARTICLES) {
-  const { content } = await getArticleContent(slug, branch, rootPath)
+export async function getArticleMeta(slug, branch = 'main') {
+  const { content } = await getArticleContent(slug, branch)
   return parseFrontmatter(content)
 }
 
-export async function saveArticle(slug, content, message, branch, rootPath = ROOTS.ARTICLES) {
-  const path = filePath(rootPath, slug)
-
+export async function saveArticle(slug, content, message, branch) {
   // Always fetch a fresh SHA before writing — never use a cached one
   let sha
   try {
     const { data } = await octokit.repos.getContent({
       owner: OWNER, repo: REPO,
-      path,
+      path: `content/${slug}/index.md`,
       ref: branch,
     })
     sha = data.sha
@@ -191,7 +146,7 @@ export async function saveArticle(slug, content, message, branch, rootPath = ROO
 
   await octokit.repos.createOrUpdateFileContents({
     owner: OWNER, repo: REPO,
-    path,
+    path: `content/${slug}/index.md`,
     message,
     content: btoa(unescape(encodeURIComponent(content))),
     branch,
@@ -199,12 +154,12 @@ export async function saveArticle(slug, content, message, branch, rootPath = ROO
   })
 
   // Invalidate everything related to this article and the article list
-  cache.invalidate(`content:${rootPath}:${slug}`)
-  cache.invalidate(`articles:${rootPath}:`)
-  cache.invalidate(`history:${rootPath}:${slug}`)
+  cache.invalidate(`content:${slug}`)
+  cache.invalidate(`articles:`)
+  cache.invalidate(`history:${slug}`)
 }
 
-// ─── Pull Requests (Draft → Publish) ─────────────────────────────────────────
+// ─── Pull Requests (Draft → Publish) ────────────────────────────────────────
 
 export async function createPullRequest(branchName, title, body = '') {
   const { data } = await octokit.pulls.create({
@@ -243,16 +198,16 @@ export async function mergePullRequest(pullNumber, commitMessage) {
   cache.clear()
 }
 
-// ─── Commits (changelog) ─────────────────────────────────────────────────────
+// ─── Commits (changelog) ────────────────────────────────────────────────────
 
-export async function getCommitHistory(slug, branch = 'main', rootPath = ROOTS.ARTICLES) {
-  const key = `history:${rootPath}:${slug}:${branch}`
+export async function getCommitHistory(slug, branch = 'main') {
+  const key = `history:${slug}:${branch}`
   const hit = cache.get(key)
   if (hit) return hit
 
   const { data } = await octokit.repos.listCommits({
     owner: OWNER, repo: REPO,
-    path: filePath(rootPath, slug),
+    path: `content/${slug}/index.md`,
     sha: branch,
     per_page: 20,
   })
@@ -266,7 +221,7 @@ export async function getCommitHistory(slug, branch = 'main', rootPath = ROOTS.A
   return result
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function parseFrontmatter(content) {
   const match = content.match(/^---\n([\s\S]*?)\n---/)
@@ -292,32 +247,5 @@ tags: ${tags}
 # ${title}
 
 Start writing here...
-`
-}
-
-// ─── Dissertation-specific template ──────────────────────────────────────────
-// Use this when creating new lit-review entries so they have the right
-// frontmatter fields for academic writing (vs. the blog-style article template).
-
-export function buildDissertationTemplate(title, description = '', tags = '') {
-  const today = new Date().toISOString().split('T')[0]
-  return `---
-title: ${title}
-description: ${description}
-date: ${today}
-tags: ${tags}
-status: draft
----
-
-# ${title}
-
-## Summary
-
-## Key Arguments
-
-## Relation to NIST 800-53 Gap
-
-## Citations
-
 `
 }
