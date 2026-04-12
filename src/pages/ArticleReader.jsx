@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { getArticleContent, getCommitHistory, listBranches } from '../utils/github.js'
+import { getArticleContent, getCommitHistory, listBranches, ROOTS  } from '../utils/github.js'
 import { Edit, GitBranch, Clock, ArrowLeft, GitCommit, ChevronDown, Loader } from 'lucide-react'
 
 export default function ArticleReader() {
@@ -22,8 +22,8 @@ export default function ArticleReader() {
   useEffect(() => {
     setLoading(true)
     Promise.all([
-      getArticleContent(slug, branch),
-      getCommitHistory(slug, branch),
+      getArticleContent(slug, branch, ROOTS.LIT_REVIEW),
+      getCommitHistory(slug, branch, ROOTS.LIT_REVIEW),
     ]).then(([{ content }, commits]) => {
       setContent(content)
       setHistory(commits)
