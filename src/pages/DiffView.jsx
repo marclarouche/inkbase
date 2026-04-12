@@ -9,6 +9,14 @@ export default function DiffView() {
   const navigate       = useNavigate()
   const [params]       = useSearchParams()
   const branch         = params.get('branch') || ''
+  const rootPath       = params.get('rootPath')
+    ? decodeURIComponent(params.get('rootPath'))
+    : 'content'
+
+  // Back destination depends on rootPath
+  const backPath = rootPath === 'catalogs/nist-800-53-r5'
+    ? `/catalog/${slug}?rootPath=${encodeURIComponent(rootPath)}`
+    : `/article/${slug}`
 
   const [mainContent,  setMainContent]  = useState('')
   const [draftContent, setDraftContent] = useState('')
@@ -20,17 +28,17 @@ export default function DiffView() {
   useEffect(() => {
     if (!branch) return
     Promise.all([
-      getArticleContent(slug, 'main'),
-      getArticleContent(slug, branch),
+      getArticleContent(slug, 'main', rootPath),
+      getArticleContent(slug, branch, rootPath),
     ]).then(([main, draft]) => {
       setMainContent(main.content)
       setDraftContent(draft.content)
     }).finally(() => setLoading(false))
-  }, [slug, branch])
+  }, [slug, branch, rootPath])
 
-  const diff   = diffLines(mainContent, draftContent)
-  const added   = diff.filter(d => d.added).reduce((n, d) => n + d.count, 0)
-  const removed = diff.filter(d => d.removed).reduce((n, d) => n + d.count, 0)
+  const diff      = diffLines(mainContent, draftContent)
+  const added     = diff.filter(d => d.added).reduce((n, d) => n + d.count, 0)
+  const removed   = diff.filter(d => d.removed).reduce((n, d) => n + d.count, 0)
   const unchanged = diff.filter(d => !d.added && !d.removed).reduce((n, d) => n + d.count, 0)
 
   async function handleOpenPR() {
@@ -53,7 +61,7 @@ export default function DiffView() {
         display: 'flex', alignItems: 'center', gap: '0.75rem',
         marginBottom: '1.5rem', flexWrap: 'wrap',
       }}>
-        <button className="btn btn-ghost" onClick={() => navigate(`/article/${slug}`)}>
+        <button className="btn btn-ghost" onClick={() => navigate(backPath)}>
           <ArrowLeft size={15} /> Back
         </button>
         <div>
@@ -184,32 +192,26 @@ export default function DiffView() {
             <span style={{ color: 'var(--ink-faint)' }}>vs</span>
             <span style={{ color: 'var(--merge)' }}>main</span>
             <span style={{ marginLeft: 'auto', fontWeight: 400, color: 'var(--ink-faint)' }}>
-              content/{slug}/index.md
+              {rootPath}/{slug}{rootPath === 'catalogs/nist-800-53-r5' ? '.md' : '/index.md'}
             </span>
           </div>
 
           {/* Unified diff lines */}
           <div style={{ overflowY: 'auto', maxHeight: '65vh' }}>
             {diff.map((part, i) => {
-              // Split into individual lines, drop the trailing empty string from a
-              // value that ends with \n (which all diff parts do)
               const lines = part.value.split('\n')
               if (lines[lines.length - 1] === '') lines.pop()
-
               if (lines.length === 0) return null
 
               const isAdded   = part.added
               const isRemoved = part.removed
               const isContext = !isAdded && !isRemoved
 
-              // For unchanged context blocks, only show up to 3 lines before/after
-              // a changed section to keep long articles readable
               const visibleLines = isContext && lines.length > 6
-                ? [...lines.slice(0, 3), null, ...lines.slice(-3)] // null = ellipsis row
+                ? [...lines.slice(0, 3), null, ...lines.slice(-3)]
                 : lines
 
               return visibleLines.map((line, j) => {
-                // Ellipsis row for collapsed context
                 if (line === null) {
                   return (
                     <div key={`${i}-ellipsis`} style={{
@@ -228,9 +230,9 @@ export default function DiffView() {
                   )
                 }
 
-                const bg     = isAdded ? '#e6ffed' : isRemoved ? '#ffeef0' : 'transparent'
-                const color  = isAdded ? '#22863a' : isRemoved ? '#cb2431' : 'var(--ink)'
-                const prefix = isAdded ? '+' : isRemoved ? '−' : ' '
+                const bg          = isAdded ? '#e6ffed' : isRemoved ? '#ffeef0' : 'transparent'
+                const color       = isAdded ? '#22863a' : isRemoved ? '#cb2431' : 'var(--ink)'
+                const prefix      = isAdded ? '+' : isRemoved ? '−' : ' '
                 const prefixColor = isAdded ? '#22863a' : isRemoved ? '#cb2431' : 'var(--ink-faint)'
 
                 return (
@@ -239,7 +241,6 @@ export default function DiffView() {
                     background: bg,
                     borderBottom: isContext ? 'none' : undefined,
                   }}>
-                    {/* Prefix gutter */}
                     <div style={{
                       flexShrink: 0,
                       width: '2.5rem',
@@ -254,7 +255,6 @@ export default function DiffView() {
                     }}>
                       {prefix}
                     </div>
-                    {/* Line content */}
                     <div style={{
                       flex: 1,
                       padding: '0.1rem 1rem',

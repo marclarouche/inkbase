@@ -47,9 +47,7 @@ export default function ArticleReader({ rootPath: rootPathProp }) {
     : `/article/${slug}/edit?branch=${branch}&rootPath=${encodeURIComponent(rootPath)}`
 
   // Diff URL
-  const diffUrl = rootPath === 'catalogs/nist-800-53-r5'
-    ? `/article/${slug}/diff?branch=${branch}`
-    : `/article/${slug}/diff?branch=${branch}`
+   const diffUrl = `/article/${slug}/diff?branch=${branch}&rootPath=${encodeURIComponent(rootPath)}`
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto' }}>
