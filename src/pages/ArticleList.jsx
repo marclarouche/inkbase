@@ -194,7 +194,7 @@ export default function ArticleList() {
             <ArticleCard
               key={article.slug}
               article={article}
-              onClick={() => navigate(`/article/${article.slug}`)}
+              onClick={() => navigate(`/article/${article.slug}?rootPath=lit-review`)}
             />
           ))}
         </div>
