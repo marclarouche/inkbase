@@ -195,7 +195,7 @@ export default function CatalogList() {
             <div
               key={family.slug}
               className="card"
-              onClick={() => navigate(`/catalog/${family.slug}/edit?branch=${activeBranch}`)}
+              onClick={() => navigate(`/catalog/${family.slug}/edit?branch=${activeBranch}&rootPath=catalogs/nist-800-53-r5`)}
               style={{
                 padding: '1.25rem 1.5rem',
                 cursor: 'pointer',
