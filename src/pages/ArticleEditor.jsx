@@ -4,11 +4,12 @@ import MDEditor from '@uiw/react-md-editor'
 import { getArticleContent, saveArticle, createBranch, listBranches } from '../utils/github.js'
 import { Save, GitBranch, ArrowLeft, Plus, Loader, Check } from 'lucide-react'
 
-export default function ArticleEditor({ rootPath = 'content' }) {
+export default function ArticleEditor() {
   const { slug }          = useParams()
   const navigate          = useNavigate()
   const [params]          = useSearchParams()
   const initialBranch     = params.get('branch') || 'main'
+  const rootPath          = params.get('rootPath') || 'content'
 
   const [branch, setBranch]           = useState(initialBranch)
   const [branches, setBranches]       = useState([])

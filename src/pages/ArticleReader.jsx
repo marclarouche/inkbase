@@ -70,7 +70,7 @@ export default function ArticleReader() {
         <button className="btn" onClick={() => setShowHistory(!showHistory)}>
           <GitCommit size={15} /> History <ChevronDown size={13} />
         </button>
-        <button className="btn btn-primary" onClick={() => navigate(`/article/${slug}/edit?branch=${branch}`)}>
+        <button className="btn btn-primary" onClick={() => navigate(`/article/${slug}/edit?branch=${branch}&rootPath=lit-review`)}>
           <Edit size={15} /> Edit
         </button>
         {branch !== 'main' && (
