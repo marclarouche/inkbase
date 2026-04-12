@@ -1,78 +1,65 @@
 import { Octokit } from '@octokit/rest'
+import { getActiveRepoConfig } from '../components/RepoContext.jsx'
 
-const octokit = new Octokit({
-  auth: import.meta.env.VITE_GITHUB_TOKEN,
-})
+// ─── Dynamic repo config ──────────────────────────────────────────────────────
+// Reads from localStorage (set by RepoContext) so switching repos in the UI
+// is reflected here after the page reloads. Falls back to .env on first run.
 
-const OWNER = import.meta.env.VITE_GITHUB_OWNER
-const REPO  = import.meta.env.VITE_GITHUB_REPO
-
-// ─── Root path constants ──────────────────────────────────────────────────────
-// Use these when calling any article function to target a specific folder tree.
-// Defaults to 'content' everywhere so all existing Inkbase calls are unchanged.
-
-export const ROOTS = {
-  ARTICLES:   'content',           // standard Inkbase articles
-  LIT_REVIEW: 'lit-review',        // dissertation literature review
-  CATALOGS:   'catalogs/nist-800-53-r5', // NIST OSCAL control families
+function getOctokit() {
+  const { token } = getActiveRepoConfig()
+  return new Octokit({ auth: token })
 }
 
-// ─── In-memory cache ─────────────────────────────────────────────────────────
-// Keyed by a string, each entry is { value, expiresAt }.
-// TTL is 60s for most reads. Write operations invalidate relevant keys.
+function getOwner() { return getActiveRepoConfig().owner }
+function getRepo()  { return getActiveRepoConfig().repo  }
 
-const TTL = 60_000 // 60 seconds
+// ─── Root path constants ──────────────────────────────────────────────────────
+export const ROOTS = {
+  ARTICLES:   'content',
+  LIT_REVIEW: 'lit-review',
+  CATALOGS:   'catalogs/nist-800-53-r5',
+}
+
+// ─── In-memory cache ──────────────────────────────────────────────────────────
+const TTL = 60_000
 
 const cache = {
   _store: new Map(),
-
   get(key) {
     const entry = this._store.get(key)
     if (!entry) return null
-    if (Date.now() > entry.expiresAt) {
-      this._store.delete(key)
-      return null
-    }
+    if (Date.now() > entry.expiresAt) { this._store.delete(key); return null }
     return entry.value
   },
-
   set(key, value) {
     this._store.set(key, { value, expiresAt: Date.now() + TTL })
   },
-
-  // Invalidate all keys that start with a given prefix
   invalidate(prefix) {
     for (const key of this._store.keys()) {
       if (key.startsWith(prefix)) this._store.delete(key)
     }
   },
-
-  // Wipe everything — used after writes that affect multiple keys
-  clear() {
-    this._store.clear()
-  },
+  clear() { this._store.clear() },
 }
 
-// ─── Branches ────────────────────────────────────────────────────────────────
+// ─── Branches ─────────────────────────────────────────────────────────────────
 
 export async function listBranches() {
   const key = 'branches'
   const hit = cache.get(key)
   if (hit) return hit
-
-  const { data } = await octokit.repos.listBranches({ owner: OWNER, repo: REPO })
+  const { data } = await getOctokit().repos.listBranches({ owner: getOwner(), repo: getRepo() })
   const result = data.map(b => b.name)
   cache.set(key, result)
   return result
 }
 
 export async function createBranch(branchName, fromBranch = 'main') {
-  const { data: ref } = await octokit.git.getRef({
-    owner: OWNER, repo: REPO,
-    ref: `heads/${fromBranch}`,
+  const { data: ref } = await getOctokit().git.getRef({
+    owner: getOwner(), repo: getRepo(), ref: `heads/${fromBranch}`,
   })
-  await octokit.git.createRef({
-    owner: OWNER, repo: REPO,
+  await getOctokit().git.createRef({
+    owner: getOwner(), repo: getRepo(),
     ref: `refs/heads/${branchName}`,
     sha: ref.object.sha,
   })
@@ -81,29 +68,16 @@ export async function createBranch(branchName, fromBranch = 'main') {
 }
 
 export async function deleteBranch(branchName) {
-  await octokit.git.deleteRef({
-    owner: OWNER, repo: REPO,
-    ref: `heads/${branchName}`,
+  await getOctokit().git.deleteRef({
+    owner: getOwner(), repo: getRepo(), ref: `heads/${branchName}`,
   })
   cache.invalidate('branches')
 }
 
-// ─── Articles (files) ─────────────────────────────────────────────────────────
-// All functions accept an optional `rootPath` parameter.
-// Pass ROOTS.LIT_REVIEW or ROOTS.CATALOGS to read dissertation content.
-// Omit it (or pass ROOTS.ARTICLES) for standard Inkbase behaviour.
-//
-// File layout per rootPath:
-//   content/               → content/<slug>/index.md   (Inkbase default)
-//   lit-review/            → lit-review/<slug>/index.md
-//   catalogs/nist-800-53-r5/ → catalogs/nist-800-53-r5/<slug>.md  (flat, no subfolder)
+// ─── Articles ─────────────────────────────────────────────────────────────────
 
 function filePath(rootPath, slug) {
-  // NIST catalog files live directly in the folder as <FAMILY>.md (e.g. AC.md)
-  // Everything else uses the <slug>/index.md convention
-  if (rootPath === ROOTS.CATALOGS) {
-    return `${rootPath}/${slug}.md`
-  }
+  if (rootPath === ROOTS.CATALOGS) return `${rootPath}/${slug}.md`
   return `${rootPath}/${slug}/index.md`
 }
 
@@ -111,29 +85,21 @@ export async function listArticles(branch = 'main', rootPath = ROOTS.ARTICLES) {
   const key = `articles:${rootPath}:${branch}`
   const hit = cache.get(key)
   if (hit) return hit
-
   try {
-    const { data } = await octokit.repos.getContent({
-      owner: OWNER, repo: REPO,
-      path: rootPath,
-      ref: branch,
+    const { data } = await getOctokit().repos.getContent({
+      owner: getOwner(), repo: getRepo(), path: rootPath, ref: branch,
     })
-
-    // NIST catalog: files directly in the folder (AC.md, AU.md, …)
     if (rootPath === ROOTS.CATALOGS) {
       const files = data.filter(item => item.type === 'file' && item.name.endsWith('.md'))
       const articles = files.map(f => ({
-        slug:        f.name.replace('.md', ''),
-        title:       f.name.replace('.md', ''),
+        slug: f.name.replace('.md', ''),
+        title: f.name.replace('.md', ''),
         description: 'NIST SP 800-53 Control Family',
-        tags:        ['nist', 'catalog'],
-        date:        '',
+        tags: ['nist', 'catalog'], date: '',
       }))
       cache.set(key, articles)
       return articles
     }
-
-    // Standard layout: subfolders each containing index.md
     const folders = data.filter(item => item.type === 'dir')
     const articles = await Promise.all(
       folders.map(async folder => {
@@ -147,20 +113,15 @@ export async function listArticles(branch = 'main', rootPath = ROOTS.ARTICLES) {
     )
     cache.set(key, articles)
     return articles
-  } catch {
-    return []
-  }
+  } catch { return [] }
 }
 
 export async function getArticleContent(slug, branch = 'main', rootPath = ROOTS.ARTICLES) {
   const key = `content:${rootPath}:${slug}:${branch}`
   const hit = cache.get(key)
   if (hit) return hit
-
-  const { data } = await octokit.repos.getContent({
-    owner: OWNER, repo: REPO,
-    path: filePath(rootPath, slug),
-    ref: branch,
+  const { data } = await getOctokit().repos.getContent({
+    owner: getOwner(), repo: getRepo(), path: filePath(rootPath, slug), ref: branch,
   })
   const content = atob(data.content.replace(/\n/g, ''))
   const result = { content, sha: data.sha }
@@ -175,44 +136,28 @@ export async function getArticleMeta(slug, branch = 'main', rootPath = ROOTS.ART
 
 export async function saveArticle(slug, content, message, branch, rootPath = ROOTS.ARTICLES) {
   const path = filePath(rootPath, slug)
-
-  // Always fetch a fresh SHA before writing — never use a cached one
   let sha
   try {
-    const { data } = await octokit.repos.getContent({
-      owner: OWNER, repo: REPO,
-      path,
-      ref: branch,
+    const { data } = await getOctokit().repos.getContent({
+      owner: getOwner(), repo: getRepo(), path, ref: branch,
     })
     sha = data.sha
-  } catch {
-    // File doesn't exist yet — new article
-  }
-
-  await octokit.repos.createOrUpdateFileContents({
-    owner: OWNER, repo: REPO,
-    path,
-    message,
+  } catch { /* new file */ }
+  await getOctokit().repos.createOrUpdateFileContents({
+    owner: getOwner(), repo: getRepo(), path, message,
     content: btoa(unescape(encodeURIComponent(content))),
-    branch,
-    ...(sha ? { sha } : {}),
+    branch, ...(sha ? { sha } : {}),
   })
-
-  // Invalidate everything related to this article and the article list
   cache.invalidate(`content:${rootPath}:${slug}`)
   cache.invalidate(`articles:${rootPath}:`)
   cache.invalidate(`history:${rootPath}:${slug}`)
 }
 
-// ─── Pull Requests (Draft → Publish) ─────────────────────────────────────────
+// ─── Pull Requests ────────────────────────────────────────────────────────────
 
 export async function createPullRequest(branchName, title, body = '') {
-  const { data } = await octokit.pulls.create({
-    owner: OWNER, repo: REPO,
-    title,
-    body,
-    head: branchName,
-    base: 'main',
+  const { data } = await getOctokit().pulls.create({
+    owner: getOwner(), repo: getRepo(), title, body, head: branchName, base: 'main',
   })
   cache.invalidate('prs')
   return data
@@ -222,45 +167,36 @@ export async function listOpenPRs() {
   const key = 'prs'
   const hit = cache.get(key)
   if (hit) return hit
-
-  const { data } = await octokit.pulls.list({
-    owner: OWNER, repo: REPO,
-    state: 'open',
-    base: 'main',
+  const { data } = await getOctokit().pulls.list({
+    owner: getOwner(), repo: getRepo(), state: 'open', base: 'main',
   })
   cache.set(key, data)
   return data
 }
 
 export async function mergePullRequest(pullNumber, commitMessage) {
-  await octokit.pulls.merge({
-    owner: OWNER, repo: REPO,
+  await getOctokit().pulls.merge({
+    owner: getOwner(), repo: getRepo(),
     pull_number: pullNumber,
     commit_title: commitMessage,
     merge_method: 'squash',
   })
-  // Merge affects articles on main, branches, and PRs — clear everything
   cache.clear()
 }
 
-// ─── Commits (changelog) ─────────────────────────────────────────────────────
+// ─── Commits ──────────────────────────────────────────────────────────────────
 
 export async function getCommitHistory(slug, branch = 'main', rootPath = ROOTS.ARTICLES) {
   const key = `history:${rootPath}:${slug}:${branch}`
   const hit = cache.get(key)
   if (hit) return hit
-
-  const { data } = await octokit.repos.listCommits({
-    owner: OWNER, repo: REPO,
-    path: filePath(rootPath, slug),
-    sha: branch,
-    per_page: 20,
+  const { data } = await getOctokit().repos.listCommits({
+    owner: getOwner(), repo: getRepo(),
+    path: filePath(rootPath, slug), sha: branch, per_page: 20,
   })
   const result = data.map(c => ({
-    sha:     c.sha.slice(0, 7),
-    message: c.commit.message,
-    date:    c.commit.author.date,
-    author:  c.commit.author.name,
+    sha: c.sha.slice(0, 7), message: c.commit.message,
+    date: c.commit.author.date, author: c.commit.author.name,
   }))
   cache.set(key, result)
   return result
@@ -294,10 +230,6 @@ tags: ${tags}
 Start writing here...
 `
 }
-
-// ─── Dissertation-specific template ──────────────────────────────────────────
-// Use this when creating new lit-review entries so they have the right
-// frontmatter fields for academic writing (vs. the blog-style article template).
 
 export function buildDissertationTemplate(title, description = '', tags = '') {
   const today = new Date().toISOString().split('T')[0]

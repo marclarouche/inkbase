@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { listArticles, listBranches } from '../utils/github.js'
+import { listArticles, listBranches, ROOTS } from '../utils/github.js'
 import { BookOpen, GitBranch, Clock, Tag, ChevronRight, Loader, GitCommit, GitMerge } from 'lucide-react'
 
 export default function ArticleList() {
@@ -13,7 +13,7 @@ export default function ArticleList() {
   useEffect(() => {
     async function load() {
       try {
-        const [arts, brs] = await Promise.all([listArticles('main'), listBranches()])
+        const [arts, brs] = await Promise.all([listArticles('main', ROOTS.LIT_REVIEW), listBranches()])
         setArticles(arts)
         setBranches(brs.filter(b => b !== 'main'))
       } catch (e) {

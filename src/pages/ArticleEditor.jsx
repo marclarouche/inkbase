@@ -4,7 +4,7 @@ import MDEditor from '@uiw/react-md-editor'
 import { getArticleContent, saveArticle, createBranch, listBranches } from '../utils/github.js'
 import { Save, GitBranch, ArrowLeft, Plus, Loader, Check } from 'lucide-react'
 
-export default function ArticleEditor() {
+export default function ArticleEditor({ rootPath = 'content' }) {
   const { slug }          = useParams()
   const navigate          = useNavigate()
   const [params]          = useSearchParams()
@@ -30,7 +30,7 @@ export default function ArticleEditor() {
 
   useEffect(() => {
     setLoading(true)
-    getArticleContent(slug, branch)
+    getArticleContent(slug, branch, rootPath)
       .then(({ content }) => {
         setContent(content)
         setSavedContent(content) // baseline for dirty tracking
@@ -54,7 +54,7 @@ export default function ArticleEditor() {
     if (!commitMsg.trim()) return alert('Please add a commit message describing your changes.')
     setSaving(true)
     try {
-      await saveArticle(slug, content, commitMsg, branch)
+      await saveArticle(slug, content, commitMsg, branch, rootPath)
       setCommitMsg('')
       setSavedContent(content) // mark as clean
       setSaved(true)
@@ -92,7 +92,7 @@ export default function ArticleEditor() {
       }}>
         <button className="btn btn-ghost" onClick={() => {
           if (isDirty && !window.confirm('You have unsaved changes. Leave anyway?')) return
-          navigate(`/article/${slug}`)
+          navigate(rootPath === 'content' ? `/article/${slug}` : `/catalog`)
         }}>
           <ArrowLeft size={15} /> Back
         </button>
