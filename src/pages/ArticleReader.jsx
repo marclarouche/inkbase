@@ -2,17 +2,25 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { getArticleContent, getCommitHistory, listBranches, ROOTS  } from '../utils/github.js'
+import { getArticleContent, getCommitHistory, listBranches } from '../utils/github.js'
 import { Edit, GitBranch, Clock, ArrowLeft, GitCommit, ChevronDown, Loader } from 'lucide-react'
 
-export default function ArticleReader() {
-  const [params]    = useSearchParams()
-  const rootPath    = params.get('rootPath') || 'lit-review'
-  const [branch, setBranch]     = useState('main')
-  const [branches, setBranches] = useState(['main'])
-  const [content, setContent]   = useState('')
-  const [history, setHistory]   = useState([])
-  const [loading, setLoading]   = useState(true)
+export default function ArticleReader({ rootPath: rootPathProp }) {
+  const { slug }        = useParams()
+  const navigate        = useNavigate()
+  const [params]        = useSearchParams()
+
+  // rootPath priority: prop from App.jsx route > URL param > default to lit-review
+  const rootPath = rootPathProp || params.get('rootPath') || 'lit-review'
+
+  // Back destination depends on where we came from
+  const backPath = rootPath === 'catalogs/nist-800-53-r5' ? '/catalog' : '/'
+
+  const [branch, setBranch]           = useState(params.get('branch') || 'main')
+  const [branches, setBranches]       = useState(['main'])
+  const [content, setContent]         = useState('')
+  const [history, setHistory]         = useState([])
+  const [loading, setLoading]         = useState(true)
   const [showHistory, setShowHistory] = useState(false)
 
   useEffect(() => {
@@ -28,10 +36,20 @@ export default function ArticleReader() {
       setContent(content)
       setHistory(commits)
     }).finally(() => setLoading(false))
-  }, [slug, branch])
+  }, [slug, branch, rootPath])
 
   // Strip frontmatter before rendering
   const body = content.replace(/^---[\s\S]*?---\n/, '')
+
+  // Edit URL — passes rootPath as param so editor knows where to save
+  const editUrl = rootPath === 'catalogs/nist-800-53-r5'
+    ? `/catalog/${slug}/edit?branch=${branch}&rootPath=${encodeURIComponent(rootPath)}`
+    : `/article/${slug}/edit?branch=${branch}&rootPath=${encodeURIComponent(rootPath)}`
+
+  // Diff URL
+  const diffUrl = rootPath === 'catalogs/nist-800-53-r5'
+    ? `/article/${slug}/diff?branch=${branch}`
+    : `/article/${slug}/diff?branch=${branch}`
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto' }}>
@@ -40,8 +58,8 @@ export default function ArticleReader() {
         display: 'flex', alignItems: 'center', gap: '0.75rem',
         marginBottom: '2rem', flexWrap: 'wrap',
       }}>
-        <button className="btn btn-ghost" onClick={() => navigate('/')}>
-          <ArrowLeft size={15} /> Library
+        <button className="btn btn-ghost" onClick={() => navigate(backPath)}>
+          <ArrowLeft size={15} /> {rootPath === 'catalogs/nist-800-53-r5' ? 'Catalog' : 'Library'}
         </button>
         <div style={{ flex: 1 }} />
 
@@ -64,18 +82,25 @@ export default function ArticleReader() {
           >
             {branches.map(b => <option key={b} value={b}>{b}</option>)}
           </select>
-          <GitBranch size={12} style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--ink-faint)' }} />
+          <GitBranch size={12} style={{
+            position: 'absolute', right: '0.5rem', top: '50%',
+            transform: 'translateY(-50%)', pointerEvents: 'none',
+            color: 'var(--ink-faint)',
+          }} />
         </div>
 
         <button className="btn" onClick={() => setShowHistory(!showHistory)}>
           <GitCommit size={15} /> History <ChevronDown size={13} />
         </button>
-        <button className="btn btn-primary" onClick={() => navigate(`/article/${slug}/edit?branch=${branch}&rootPath=lit-review`)}>
+        <button className="btn btn-primary" onClick={() => navigate(editUrl)}>
           <Edit size={15} /> Edit
         </button>
         {branch !== 'main' && (
-          <button className="btn" style={{ borderColor: 'var(--merge)', color: 'var(--merge)' }}
-            onClick={() => navigate(`/article/${slug}/diff?branch=${branch}`)}>
+          <button
+            className="btn"
+            style={{ borderColor: 'var(--merge)', color: 'var(--merge)' }}
+            onClick={() => navigate(diffUrl)}
+          >
             View Diff →
           </button>
         )}
@@ -84,7 +109,10 @@ export default function ArticleReader() {
       {/* Commit history panel */}
       {showHistory && (
         <div className="card" style={{ marginBottom: '2rem', padding: '1.25rem' }}>
-          <h3 style={{ fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--ink-muted)', marginBottom: '1rem' }}>
+          <h3 style={{
+            fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase',
+            letterSpacing: '0.05em', color: 'var(--ink-muted)', marginBottom: '1rem',
+          }}>
             Commit History — {branch}
           </h3>
           {history.length === 0 ? (
@@ -93,10 +121,15 @@ export default function ArticleReader() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               {history.map(c => (
                 <div key={c.sha} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                  <span className="badge badge-branch" style={{ flexShrink: 0, marginTop: '0.1rem' }}>{c.sha}</span>
+                  <span className="badge badge-branch" style={{ flexShrink: 0, marginTop: '0.1rem' }}>
+                    {c.sha}
+                  </span>
                   <div>
                     <p style={{ fontSize: '0.875rem' }}>{c.message}</p>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--ink-faint)', display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.1rem' }}>
+                    <p style={{
+                      fontSize: '0.75rem', color: 'var(--ink-faint)',
+                      display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.1rem',
+                    }}>
                       <Clock size={11} /> {new Date(c.date).toLocaleString()}
                     </p>
                   </div>
