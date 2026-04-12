@@ -21,7 +21,9 @@ export default function App() {
           <Route path="review" element={<ReviewQueue />} />
           <Route path="new" element={<NewArticle />} />
           {/* ── Catalog routes — NIST control families ── */}
+          {/* ── Catalog routes — NIST control families ── */}
           <Route path="catalog" element={<CatalogList />} />
+          <Route path="catalog/:slug" element={<ArticleReader rootPath="catalogs/nist-800-53-r5" />} />
           <Route path="catalog/:slug/edit" element={<ArticleEditor rootPath="catalogs/nist-800-53-r5" />} />
         </Route>
       </Routes>
