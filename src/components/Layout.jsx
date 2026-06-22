@@ -1,8 +1,9 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { GitPullRequest, Plus, Home, ChevronDown, Database, Check, Settings, X, GitBranch, Shield } from 'lucide-react'
+import { GitPullRequest, Plus, Home, ChevronDown, Database, Check, Settings, X, GitBranch, Shield, LogOut } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import NewArticleModal from './NewArticleModal.jsx'
 import { useRepo } from './RepoContext.jsx'
+
 
 export default function Layout() {
   const [showNew, setShowNew]           = useState(false)
