@@ -224,9 +224,17 @@ export default function Layout() {
             <NavLink to="/review" className="btn btn-ghost" style={navStyle}>
               <GitPullRequest size={15} /> Review Queue
             </NavLink>
-            <button className="btn btn-primary" onClick={() => setShowNew(true)}>
+           <button className="btn btn-primary" onClick={() => setShowNew(true)}>
               <Plus size={15} /> New Article
             </button>
+            
+            <a  href="/cdn-cgi/access/logout"
+              className="btn btn-ghost"
+              style={{ color: 'var(--ink-faint)' }}
+              title="Sign out"
+            >
+              <LogOut size={15} />
+            </a>
           </nav>
         </div>
       </header>
